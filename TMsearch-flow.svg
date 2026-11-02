@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="1470" viewBox="0 0 920 1470" font-family="-apple-system, Helvetica, Arial, sans-serif" font-size="13" fill="#1d1d1f">
+<title>TMsearch flow</title>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#555"/></marker>
+<style>.lab{font-size:12px;fill:#555;font-style:italic} .lane{font-size:14px;font-weight:600;fill:#444}</style></defs>
+<rect width="920" height="1470" fill="#ffffff"/>
+<rect x="60" y="250" width="360" height="1190" rx="14" fill="#0F8A88" fill-opacity="0.05"/>
+<rect x="500" y="250" width="360" height="1190" rx="14" fill="#6A4FA8" fill-opacity="0.05"/>
+<text x="254" y="274" class="lane">Finder</text>
+<text x="694" y="274" class="lane">Terminal</text>
+<rect x="350.0" y="20.0" width="220" height="40" rx="20.0" fill="#EEEEEE" stroke="#666666" stroke-width="1.5"/>
+<text x="460" y="45" text-anchor="middle" font-weight="600">TMsearch starts</text>
+<path d="M460,58 L460,92" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<polygon points="460,92.0 565.0,130 460,168.0 355.0,130" fill="#FFF4E0" stroke="#C27C0E" stroke-width="1.5"/>
+<text x="460" y="135" text-anchor="middle" font-weight="600">Help asked for?</text>
+<rect x="620.0" y="101.0" width="250" height="58" rx="29.0" fill="#EEEEEE" stroke="#666666" stroke-width="1.5"/>
+<text x="745" y="126" text-anchor="middle" font-weight="600">Show help</text>
+<text x="745" y="144" text-anchor="middle">text in terminal, dialog in Finder</text>
+<path d="M565,130 L620,130" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="565" y="122" class="lab">yes</text>
+<path d="M460,168 L460,182" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="468" y="180" class="lab">no</text>
+<polygon points="460,185.0 575.0,220 460,255.0 345.0,220" fill="#FFF4E0" stroke="#C27C0E" stroke-width="1.5"/>
+<text x="460" y="225" text-anchor="middle" font-weight="600">Run from Finder?</text>
+<path d="M345,220 L240,220 L240,300" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="260" y="212" class="lab">yes</text>
+<path d="M575,220 L680,220 L680,300" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="585" y="212" class="lab">no: a terminal</text>
+<rect x="90.0" y="301.0" width="300" height="58" rx="8" fill="#E3F5F3" stroke="#0F8A88" stroke-width="1.5"/>
+<text x="240" y="326" text-anchor="middle" font-weight="600">Source folder</text>
+<text x="240" y="344" text-anchor="middle">typed, or Browse; may no longer exist</text>
+<path d="M240,357 L240,385" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="90.0" y="383.0" width="300" height="58" rx="8" fill="#E3F5F3" stroke="#0F8A88" stroke-width="1.5"/>
+<text x="240" y="408" text-anchor="middle" font-weight="600">Destination folder</text>
+<text x="240" y="426" text-anchor="middle">must exist</text>
+<path d="M240,439 L240,467" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="90.0" y="465.0" width="300" height="58" rx="8" fill="#E3F5F3" stroke="#0F8A88" stroke-width="1.5"/>
+<text x="240" y="490" text-anchor="middle" font-weight="600">Name</text>
+<text x="240" y="508" text-anchor="middle">part of a name; * and ? allowed</text>
+<path d="M240,521 L240,549" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="90.0" y="547.0" width="300" height="76" rx="8" fill="#E3F5F3" stroke="#0F8A88" stroke-width="1.5"/>
+<text x="240" y="572" text-anchor="middle" font-weight="600">Scope</text>
+<text x="240" y="590" text-anchor="middle">this folder / and subfolders /</text>
+<text x="240" y="608" text-anchor="middle">Deep Search (remembered)</text>
+<rect x="530.0" y="292.0" width="300" height="76" rx="8" fill="#EFEAF8" stroke="#6A4FA8" stroke-width="1.5"/>
+<text x="680" y="317" text-anchor="middle" font-weight="600">Folder and name</text>
+<text x="680" y="335" text-anchor="middle">from arguments, or asked for</text>
+<text x="680" y="353" text-anchor="middle">(last ones offered)</text>
+<path d="M680,368 L680,383" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="530.0" y="383.0" width="300" height="76" rx="8" fill="#EFEAF8" stroke="#6A4FA8" stroke-width="1.5"/>
+<text x="680" y="408" text-anchor="middle" font-weight="600">Scope from options</text>
+<text x="680" y="426" text-anchor="middle">none: folder   -r: subfolders</text>
+<text x="680" y="444" text-anchor="middle">-d: Deep Search</text>
+<path d="M240,621 L240,660 L440,660 L440,682" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M680,457 L680,660 L480,660 L480,682" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="320.0" y="681.0" width="280" height="58" rx="8" fill="#EAF2FB" stroke="#3B6EA8" stroke-width="1.5"/>
+<text x="460" y="706" text-anchor="middle" font-weight="600">List backups</text>
+<text x="460" y="724" text-anchor="middle">tmutil listbackups</text>
+<path d="M460,737 L460,758" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<polygon points="460,758.0 565.0,796 460,834.0 355.0,796" fill="#FFF4E0" stroke="#C27C0E" stroke-width="1.5"/>
+<text x="460" y="801" text-anchor="middle" font-weight="600">Backups found?</text>
+<rect x="620.0" y="758.0" width="250" height="76" rx="8" fill="#FDECEC" stroke="#B03A3A" stroke-width="1.5"/>
+<text x="745" y="783" text-anchor="middle" font-weight="600">Stop with a message</text>
+<text x="745" y="801" text-anchor="middle">Full Disk Access needed, or</text>
+<text x="745" y="819" text-anchor="middle">no backup disk connected</text>
+<path d="M565,796 L620,796" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="565" y="788" class="lab">no</text>
+<path d="M460,834 L460,858" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="468" y="852" class="lab">yes</text>
+<rect x="280.0" y="857.0" width="360" height="94" rx="8" fill="#EAF2FB" stroke="#3B6EA8" stroke-width="1.5"/>
+<text x="460" y="882" text-anchor="middle" font-weight="600">Search every backup</text>
+<text x="460" y="900" text-anchor="middle">folder: read the folder in each</text>
+<text x="460" y="918" text-anchor="middle">subfolders: walk the newest, look up each path</text>
+<text x="460" y="936" text-anchor="middle">Deep Search: walk the folder in every backup</text>
+<path d="M460,949 L460,970" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<polygon points="460,970.0 565.0,1008 460,1046.0 355.0,1008" fill="#FFF4E0" stroke="#C27C0E" stroke-width="1.5"/>
+<text x="460" y="1013" text-anchor="middle" font-weight="600">Any versions?</text>
+<rect x="620.0" y="970.0" width="250" height="76" rx="8" fill="#FDECEC" stroke="#B03A3A" stroke-width="1.5"/>
+<text x="745" y="995" text-anchor="middle" font-weight="600">Stop with a message</text>
+<text x="745" y="1013" text-anchor="middle">folder in no backup, or</text>
+<text x="745" y="1031" text-anchor="middle">no matching versions</text>
+<path d="M565,1008 L620,1008" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="565" y="1000" class="lab">no</text>
+<path d="M460,1046 L460,1066" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="468" y="1062" class="lab">yes</text>
+<rect x="310.0" y="1064.0" width="300" height="58" rx="8" fill="#EAF2FB" stroke="#3B6EA8" stroke-width="1.5"/>
+<text x="460" y="1089" text-anchor="middle" font-weight="600">List distinct versions</text>
+<text x="460" y="1107" text-anchor="middle">newest first: date, size, backups</text>
+<path d="M400,1120 L400,1140 L240,1140 L240,1162" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M520,1120 L520,1140 L680,1140 L680,1162" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="90.0" y="1160.0" width="300" height="58" rx="8" fill="#E3F5F3" stroke="#0F8A88" stroke-width="1.5"/>
+<text x="240" y="1185" text-anchor="middle" font-weight="600">Pick versions</text>
+<text x="240" y="1203" text-anchor="middle">Command-click for several</text>
+<rect x="530.0" y="1151.0" width="300" height="76" rx="8" fill="#EFEAF8" stroke="#6A4FA8" stroke-width="1.5"/>
+<text x="680" y="1176" text-anchor="middle" font-weight="600">Type numbers</text>
+<text x="680" y="1194" text-anchor="middle">such as 1 3 5-7, then</text>
+<text x="680" y="1212" text-anchor="middle">the destination folder</text>
+<path d="M240,1216 L240,1240 L440,1240 L440,1262" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M680,1225 L680,1240 L480,1240 L480,1262" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="280.0" y="1260.0" width="360" height="94" rx="8" fill="#EAF2FB" stroke="#3B6EA8" stroke-width="1.5"/>
+<text x="460" y="1285" text-anchor="middle" font-weight="600">Restore each version</text>
+<text x="460" y="1303" text-anchor="middle">copy as &lt;name&gt;-&lt;yyyymmdd-hhmmss&gt;.&lt;ext&gt;</text>
+<text x="460" y="1321" text-anchor="middle">remove Time Machine&#x27;s write protection</text>
+<text x="460" y="1339" text-anchor="middle">set its modified time to now</text>
+<path d="M400,1352 L400,1370 L240,1370 L240,1392" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M520,1352 L520,1370 L680,1370 L680,1392" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="110.0" y="1390.0" width="260" height="58" rx="29.0" fill="#EEEEEE" stroke="#666666" stroke-width="1.5"/>
+<text x="240" y="1415" text-anchor="middle" font-weight="600">Show the copies in Finder</text>
+<text x="240" y="1433" text-anchor="middle">and list them in a dialog</text>
+<rect x="550.0" y="1399.0" width="260" height="40" rx="20.0" fill="#EEEEEE" stroke="#666666" stroke-width="1.5"/>
+<text x="680" y="1424" text-anchor="middle" font-weight="600">Print each restored path</text>
+</svg>

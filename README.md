@@ -116,6 +116,10 @@ backup. That takes minutes rather than seconds, and longer for a big folder.
 Searching your whole disk either way is not practical; pick the folder the
 file was in, or one a level or two above it.
 
+## How it works
+
+![TMsearch flow chart](TMsearch-flow.svg)
+
 ## Requirements
 
 macOS 11 or later, on Apple silicon or Intel. The Time Machine backup disk must
