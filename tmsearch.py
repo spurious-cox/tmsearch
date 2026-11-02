@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """
 TMsearch - find and restore past versions of a file from Time Machine backups.
-Version: 1.6.2
+Version: 1.7.0
 
     Terminal:       tmsearch [-r|-d] [directory] [name]   numbered results in the same window
     Finder:         double-click TMsearch.app       dialogs + numbered list window
@@ -43,6 +43,9 @@ needs it, with an Open Settings button in Finder, instead of tmutil's text,
 which always says to add Terminal.
 
 v1.6.2: paths in the home folder are shown starting with ~.
+
+v1.7.0: several versions can be restored at once: Command-click in the Finder
+list, or type numbers and ranges such as 1 3 5-7 in the terminal.
 """
 
 import fnmatch
@@ -65,7 +68,7 @@ SCOPES = ("This folder only",
           "This folder and its subfolders",
           "Deep Search: every backup, also finds deleted folders (takes minutes)")
 SCOPE_MODES = ("folder", "subfolders", "deep")
-APP_VERSION = "1.6.2"
+APP_VERSION = "1.7.0"
 PREFS = os.path.expanduser("~/Library/Preferences/com.timmccoy.tmsearch.plist")
 
 
@@ -147,7 +150,7 @@ def help_text():
          "  tmsearch -d [directory] [name]  Deep Search: subfolders in every backup (minutes)",
          "  tmsearch                        asks for them, offering the last ones as defaults",
          "  double-click TMsearch.app       dialogs: source folder, destination folder, name,",
-         "                                  then a numbered list window to pick the one to restore",
+         "                                  then a numbered list window to pick the versions to restore",
          "  tmsearch -h | -help | --help    this text", "",
          "  name is part of a file name (case-insensitive), optionally with * and ?:",
          "  state*farm matches 'Statefarm_home.pdf' and 'State Farm Claim.eml'.",
@@ -379,6 +382,20 @@ def restore(v, dest_dir):
 
 # ---------- terminal ----------
 
+def parse_picks(text, count):
+    """Numbers and ranges such as "1 3 5-7" or "1,3,5-7", in order, without repeats."""
+    picks = []
+    for part in text.replace(",", " ").split():
+        lo, _, hi = part.partition("-")
+        if not lo.isdigit() or not (hi or lo).isdigit():
+            raise ValueError(part)
+        lo, hi = int(lo), int(hi or lo)
+        if not 1 <= lo <= hi <= count:
+            raise ValueError(part)
+        picks += [n for n in range(lo, hi + 1) if n not in picks]
+    return picks
+
+
 def cli(args, mode="folder"):
     t0 = time.time()
     prefs = load_prefs()
@@ -412,15 +429,15 @@ def cli(args, mode="folder"):
     for i, v in enumerate(results, 1):
         print(label(i, v))
     try:
-        pick = input("\nNumber to restore (blank to quit): ").strip()
+        pick = input("\nNumbers to restore, such as 1 3 5-7 (blank to quit): ").strip()
         if not pick:
             return 0
-        v = results[int(pick) - 1]
+        chosen = [results[n - 1] for n in parse_picks(pick, len(results))]
         default_dest = prefs.get("destination") or directory
         dest = input("Restore into directory [%s]: " % tilde(default_dest)).strip()
         dest = os.path.abspath(os.path.expanduser(dest or default_dest))
-    except (ValueError, IndexError):
-        sys.stderr.write("TMsearch: not a valid number\n")
+    except ValueError as e:
+        sys.stderr.write("TMsearch: %s is not a number in the list\n" % e)
         return 1
     except (EOFError, KeyboardInterrupt):
         print()
@@ -428,10 +445,17 @@ def cli(args, mode="folder"):
     if not os.path.isdir(dest):
         sys.stderr.write("TMsearch: %s is not a directory\n" % tilde(dest))
         return 1
-    target = restore(v, dest)
-    save_prefs(destination=dest, restored=target, status="restored")
-    print("Restored: %s" % tilde(target))
-    return 0
+    rc = 0
+    for v in chosen:
+        try:
+            target = restore(v, dest)
+        except RuntimeError as e:
+            sys.stderr.write("TMsearch: could not restore %s: %s\n" % (v["name"], e))
+            rc = 1
+            continue
+        save_prefs(destination=dest, restored=target, status="restored")
+        print("Restored: %s" % tilde(target))
+    return rc
 
 
 # ---------- Finder / GUI ----------
@@ -535,21 +559,30 @@ def gui():
     note = " (first %d of %d)" % (MAX_GUI, len(results)) if len(results) > MAX_GUI else ""
     rc, choice = osa('on run argv\ntell current application to activate\n'
                      'set r to choose from list (items 2 thru -1 of argv) with title "TMsearch" '
-                     'with prompt (item 1 of argv) OK button name "Restore" cancel button name "Cancel"\n'
-                     'if r is false then error number -128\nreturn item 1 of r\nend run',
-                     ["Pick ONE result to restore%s:" % note] + [label(i, v) for i, v in enumerate(shown, 1)])
+                     'with prompt (item 1 of argv) OK button name "Restore" cancel button name "Cancel" '
+                     'with multiple selections allowed\n'
+                     'if r is false then error number -128\n'
+                     'set AppleScript\'s text item delimiters to linefeed\nreturn r as text\nend run',
+                     ["Pick the versions to restore; Command-click to pick more than one%s:" % note]
+                     + [label(i, v) for i, v in enumerate(shown, 1)])
     if rc or not choice:
         return 0
-    v = shown[int(choice.split(".", 1)[0]) - 1]
-    try:
-        target = restore(v, dest)
-    except RuntimeError as e:
-        die("Restore failed: %s" % e, True)
-    save_prefs(restored=target, status="restored")
-    subprocess.run(["/usr/bin/open", "-R", target])
+    targets, failed = [], []
+    for line in choice.splitlines():
+        v = shown[int(line.split(".", 1)[0]) - 1]
+        try:
+            targets.append(restore(v, dest))
+        except RuntimeError as e:
+            failed.append("%s: %s" % (v["name"], e))
+    if not targets:
+        die("Restore failed: %s" % "\n".join(failed), True)
+    save_prefs(restored=targets[-1], status="restored")
+    subprocess.run(["/usr/bin/open", "-R"] + targets)
     osa('on run argv\ntell current application to activate\n'
-        'display dialog ("Restored to:\n" & item 1 of argv) with title "TMsearch" '
-        'buttons {"OK"} default button 1\nend run', [tilde(target)])
+        'display dialog (item 1 of argv) with title "TMsearch" '
+        'buttons {"OK"} default button 1\nend run',
+        ["Restored to:\n" + "\n".join(tilde(t) for t in targets)
+         + ("\n\nNot restored:\n" + "\n".join(failed) if failed else "")])
     return 0
 
 

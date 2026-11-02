@@ -1,4 +1,4 @@
-# TMsearch 1.6.2
+# TMsearch 1.7.0
 
 Find every past version of a file in your Time Machine backups and restore the
 one you want, without browsing backups one at a time in the Time Machine
@@ -59,8 +59,9 @@ It then asks how far to search:
 - **Deep Search**: subfolders in every backup, which also finds files in
   folders you have since deleted. It takes minutes.
 
-It remembers your choice for next time, then lists the versions it found. Pick one and click Restore, and the copy
-is shown in Finder.
+It remembers your choice for next time, then lists the versions it found.
+Pick one, or Command-click to pick several, and click Restore. The copies
+are shown in Finder.
 
 ## Using it from the terminal
 
@@ -68,7 +69,8 @@ is shown in Finder.
     tmsearch -r [folder] [name]     also search subfolders
     tmsearch -d [folder] [name]     Deep Search
 
-Results are numbered; type a number to restore that version. With no arguments,
+Results are numbered; type a number to restore that version, or several
+numbers and ranges, such as `1 3 5-7`, to restore more than one. With no arguments,
 `tmsearch` asks for the folder and name, offering the last ones you used.
 `tmsearch --help` also shows your Time Machine disk and how many backups it
 holds.
