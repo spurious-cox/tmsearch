@@ -1,4 +1,4 @@
-# TMsearch 1.4.0
+# TMsearch 1.5.0
 
 Find every past version of a file in your Time Machine backups and restore the
 one you want, without browsing backups one at a time in the Time Machine
@@ -44,7 +44,7 @@ Open TMsearch. It asks for:
 1. the **source folder**, where the file was. Type the path if the folder no
    longer exists;
 2. the **destination folder** for the restored copy;
-3. the **name**: part of a file name, or a pattern such as `*.txt`.
+3. the **name**: part of a file name, which can include `*` and `?`.
 
 It then asks how far to search:
 
@@ -67,8 +67,9 @@ Results are numbered; type a number to restore that version. With no arguments,
 `tmsearch --help` also shows your Time Machine disk and how many backups it
 holds.
 
-The name is matched without regard to case. A plain word matches anywhere in a
-file name; `*` and `?` make it a pattern.
+The name is matched anywhere in a file name, without regard to case. `*`
+stands for any run of characters and `?` for any one character, so
+`state*farm` finds both `Statefarm_home.pdf` and `State Farm Claim.eml`.
 
 ## Subfolders and Deep Search
 

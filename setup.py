@@ -1,4 +1,4 @@
-"""py2app build for TMsearch.app — v1.0.0
+"""py2app build for TMsearch.app — v1.1.0
 
     ./venv/bin/python setup.py py2app
 
@@ -36,6 +36,9 @@ OPTIONS = {
     "argv_emulation": False,
     "arch": "universal2",
     "excludes": ["tkinter", "test", "unittest", "pydoc_data"],
+    # Imported inside try/except, which py2app's import scan skips. Without
+    # it the terminal prompts have no arrow keys or line editing.
+    "includes": ["readline"],
     "plist": {
         "CFBundleName": "TMsearch",
         "CFBundleDisplayName": "TMsearch",
