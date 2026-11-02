@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """
 TMsearch - find and restore past versions of a file from Time Machine backups.
-Version: 1.5.1
+Version: 1.6.0
 
     Terminal:       tmsearch [-r|-d] [directory] [name]   numbered results in the same window
     Finder:         double-click TMsearch.app       dialogs + numbered list window
@@ -31,6 +31,12 @@ as 0 versions. The terminal prompts have line editing, and Control-C ends
 the line before quitting.
 
 v1.5.1: --help explains quoting names in the shell.
+
+v1.6.0: a restored copy's modified time is the time it was restored; its name
+still carries the version's own modified time. The copy also loses the access
+rule Time Machine puts on every backed-up item (everyone: deny write, delete,
+writeattr ...), which cp -p carried over and which left restored files
+impossible to edit or delete normally.
 """
 
 import fnmatch
@@ -53,7 +59,7 @@ SCOPES = ("This folder only",
           "This folder and its subfolders",
           "Deep Search: every backup, also finds deleted folders (takes minutes)")
 SCOPE_MODES = ("folder", "subfolders", "deep")
-APP_VERSION = "1.5.1"
+APP_VERSION = "1.6.0"
 PREFS = os.path.expanduser("~/Library/Preferences/com.timmccoy.tmsearch.plist")
 
 
@@ -138,8 +144,9 @@ def help_text():
          "  -r finds matches in subfolders that exist in the newest backup holding the folder;",
          "  each one is then looked up in every backup.",
          "  -d walks the folder in every backup, so it also finds files in deleted folders.",
-         "  A restored copy is named <name>-<yyyymmdd-hhmmss modified>.<ext>",
-         "  and never overwrites anything.", "",
+         "  A restored copy is named <name>-<yyyymmdd-hhmmss modified>.<ext>,",
+         "  and its own modified time is when it was restored.",
+         "  Restoring never overwrites anything.", "",
          "LAST / CURRENT SEARCH (offered as the defaults next time)", "  " + PREFS] + last +
         ["", "TIME MACHINE VOLUME"] + tm_volume() +
         ["", "Needs Full Disk Access for Terminal (CLI) or TMsearch.app (double-click)."]) + "\n"
@@ -316,6 +323,15 @@ def restore(v, dest_dir):
     r = subprocess.run(["/bin/cp", "-Rp", v["path"], target], capture_output=True, text=True)
     if r.returncode != 0:
         raise RuntimeError(r.stderr.strip() or "cp failed")
+    # -p also copied the deny-write/delete ACL Time Machine puts on every
+    # backed-up item. Remove it throughout, or the copy cannot be edited,
+    # renamed or deleted normally.
+    r = subprocess.run(["/bin/chmod", "-R", "-N", target], capture_output=True, text=True)
+    if r.returncode != 0:
+        raise RuntimeError(r.stderr.strip() or "could not clear the backup's access rule")
+    # -p kept the backup's times; the copy is stamped with now so it sorts as
+    # new. Only the top item: a restored folder's contents keep their own.
+    os.utime(target, follow_symlinks=False)
     return target
 
 

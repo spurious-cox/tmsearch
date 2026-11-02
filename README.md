@@ -1,4 +1,4 @@
-# TMsearch 1.5.1
+# TMsearch 1.6.0
 
 Find every past version of a file in your Time Machine backups and restore the
 one you want, without browsing backups one at a time in the Time Machine
@@ -18,7 +18,11 @@ A restored copy is saved under a new name and never overwrites anything:
 
     <name>-<yyyymmdd-hhmmss>.<ext>
 
-where the date is when that version was last modified.
+where the date is when that version was last modified. The copy's own
+modified time is when you restored it, so it sorts as new in Finder. Restoring
+a folder sets that time on the folder itself; the files inside keep theirs.
+The copy is an ordinary file you can edit, rename and delete: TMsearch removes
+the write-protection Time Machine puts on everything in a backup.
 
 ## Install
 
