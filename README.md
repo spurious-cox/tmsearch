@@ -1,4 +1,4 @@
-# TMsearch 1.5.0
+# TMsearch 1.5.1
 
 Find every past version of a file in your Time Machine backups and restore the
 one you want, without browsing backups one at a time in the Time Machine
@@ -70,6 +70,31 @@ holds.
 The name is matched anywhere in a file name, without regard to case. `*`
 stands for any run of characters and `?` for any one character, so
 `state*farm` finds both `Statefarm_home.pdf` and `State Farm Claim.eml`.
+
+### Quoting names
+
+The shell reads the command line before TMsearch does, so quote any name that
+contains `*`, `?` or a space:
+
+    tmsearch -r ~/Documents 'state*farm'
+    tmsearch -r ~/Documents "state farm"
+
+Unquoted, zsh (the macOS default shell) treats `*` and `?` as wildcards for
+files in the current folder, and usually stops with `no matches found`. A space
+splits the name into two arguments. A plain name such as `statefarm` needs no
+quotes.
+
+In zsh you can skip quoting `*` and `?` by adding this line to `~/.zshrc` and
+opening a new terminal window:
+
+    alias tmsearch='noglob tmsearch'
+
+`noglob` tells zsh to leave wildcards alone for this one command; `~` is still
+expanded. Then this works as typed:
+
+    tmsearch -r ~/Documents state*farm
+
+A name with a space still needs quotes.
 
 ## Subfolders and Deep Search
 

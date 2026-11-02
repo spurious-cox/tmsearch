@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """
 TMsearch - find and restore past versions of a file from Time Machine backups.
-Version: 1.5.0
+Version: 1.5.1
 
     Terminal:       tmsearch [-r|-d] [directory] [name]   numbered results in the same window
     Finder:         double-click TMsearch.app       dialogs + numbered list window
@@ -29,6 +29,8 @@ v1.5.0: a pattern with * or ? matches anywhere in a name, as a plain word
 does. A folder that is in none of the backups is reported as such instead of
 as 0 versions. The terminal prompts have line editing, and Control-C ends
 the line before quitting.
+
+v1.5.1: --help explains quoting names in the shell.
 """
 
 import fnmatch
@@ -51,7 +53,7 @@ SCOPES = ("This folder only",
           "This folder and its subfolders",
           "Deep Search: every backup, also finds deleted folders (takes minutes)")
 SCOPE_MODES = ("folder", "subfolders", "deep")
-APP_VERSION = "1.5.0"
+APP_VERSION = "1.5.1"
 PREFS = os.path.expanduser("~/Library/Preferences/com.timmccoy.tmsearch.plist")
 
 
@@ -126,6 +128,12 @@ def help_text():
          "  tmsearch -h | -help | --help    this text", "",
          "  name is part of a file name (case-insensitive), optionally with * and ?:",
          "  state*farm matches 'Statefarm_home.pdf' and 'State Farm Claim.eml'.",
+         "",
+         "  Quote a name that has *, ? or a space, or the shell changes it first:",
+         "      tmsearch -r ~/Documents 'state*farm'",
+         "      tmsearch -r ~/Documents \"state farm\"",
+         "  In zsh, this alias in ~/.zshrc removes the need to quote * and ?:",
+         "      alias tmsearch='noglob tmsearch'",
          "  Folders and apps work too, and so do files that have since been deleted.",
          "  -r finds matches in subfolders that exist in the newest backup holding the folder;",
          "  each one is then looked up in every backup.",
