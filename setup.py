@@ -1,4 +1,4 @@
-"""py2app build for TMsearch.app — v1.1.0
+"""py2app build for TMsearch.app — v1.2.0
 
     ./venv/bin/python setup.py py2app
 
@@ -39,6 +39,7 @@ OPTIONS = {
     # Imported inside try/except, which py2app's import scan skips. Without
     # it the terminal prompts have no arrow keys or line editing.
     "includes": ["readline"],
+    "iconfile": "TMsearch.icns",
     "plist": {
         "CFBundleName": "TMsearch",
         "CFBundleDisplayName": "TMsearch",

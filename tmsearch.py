@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """
 TMsearch - find and restore past versions of a file from Time Machine backups.
-Version: 1.7.0
+Version: 1.7.1
 
     Terminal:       tmsearch [-r|-d] [directory] [name]   numbered results in the same window
     Finder:         double-click TMsearch.app       dialogs + numbered list window
@@ -46,6 +46,8 @@ v1.6.2: paths in the home folder are shown starting with ~.
 
 v1.7.0: several versions can be restored at once: Command-click in the Finder
 list, or type numbers and ranges such as 1 3 5-7 in the terminal.
+
+v1.7.1: the app has an icon.
 """
 
 import fnmatch
@@ -68,7 +70,7 @@ SCOPES = ("This folder only",
           "This folder and its subfolders",
           "Deep Search: every backup, also finds deleted folders (takes minutes)")
 SCOPE_MODES = ("folder", "subfolders", "deep")
-APP_VERSION = "1.7.0"
+APP_VERSION = "1.7.1"
 PREFS = os.path.expanduser("~/Library/Preferences/com.timmccoy.tmsearch.plist")
 
 
