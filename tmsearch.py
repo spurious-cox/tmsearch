@@ -185,9 +185,10 @@ def no_disk_access(gui):
     who = "TMsearch" if gui else "Terminal (or the terminal app you use)"
     msg = ("TMsearch needs Full Disk Access to read your Time Machine backups.\n\n"
            "In System Settings > Privacy & Security > Full Disk Access, click +, "
-           "add %s, and turn it on. If %s is already listed, remove it with - and "
-           "add it again; an updated copy is not covered by the old entry."
-           % (who, "TMsearch" if gui else "it"))
+           "add %s, and turn it on." % who)
+    if gui:
+        msg += (" If TMsearch is already listed, remove it with - and add it again; "
+                "an updated copy is not covered by the old entry.")
     if not gui:
         sys.stderr.write("TMsearch: %s\n" % msg.replace("\n\n", "\n"))
         sys.exit(1)
