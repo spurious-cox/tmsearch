@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 """
 TMsearch - find and restore past versions of a file from Time Machine backups.
-Version: 1.3.0
+Version: 1.4.0
 
-    Terminal:       tmsearch [-r] [directory] [name]   numbered results in the same window
+    Terminal:       tmsearch [-r|-d] [directory] [name]   numbered results in the same window
     Finder:         double-click TMsearch.app       dialogs + numbered list window
 
     name is part of a file name (case-insensitive) or a pattern with * and ?.
@@ -19,6 +19,11 @@ v1.3.0: subfolder search (-r, or Search Subfolders in Finder). The newest
 backup that holds the folder is walked to find where matching files live, and
 each of those paths is then looked up in every backup. A file deleted before
 that newest backup is only found if it was directly in the folder searched.
+
+v1.4.0: Deep Search (-d, or Deep Search in Finder) walks the folder and its
+subfolders in every backup, so it also finds files in folders since deleted.
+It takes minutes rather than seconds. In Finder the search scope is chosen
+from a list after the name, since a dialog holds only three buttons.
 """
 
 import fnmatch
@@ -32,7 +37,12 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 MAX_GUI = 300
-APP_VERSION = "1.3.0"
+# Search scopes, as offered in Finder, in order.
+SCOPES = ("This folder only",
+          "This folder and its subfolders",
+          "Deep Search: every backup, also finds deleted folders (takes minutes)")
+SCOPE_MODES = ("folder", "subfolders", "deep")
+APP_VERSION = "1.4.0"
 PREFS = os.path.expanduser("~/Library/Preferences/com.timmccoy.tmsearch.plist")
 
 
@@ -100,6 +110,7 @@ def help_text():
          "USAGE",
          "  tmsearch [directory] [name]     terminal: numbered results in this window",
          "  tmsearch -r [directory] [name]  also search subfolders",
+         "  tmsearch -d [directory] [name]  Deep Search: subfolders in every backup (minutes)",
          "  tmsearch                        asks for them, offering the last ones as defaults",
          "  double-click TMsearch.app       dialogs: source folder, destination folder, name,",
          "                                  then a numbered list window to pick the one to restore",
@@ -108,6 +119,7 @@ def help_text():
          "  Folders and apps work too, and so do files that have since been deleted.",
          "  -r finds matches in subfolders that exist in the newest backup holding the folder;",
          "  each one is then looked up in every backup.",
+         "  -d walks the folder in every backup, so it also finds files in deleted folders.",
          "  A restored copy is named <name>-<yyyymmdd-hhmmss modified>.<ext>",
          "  and never overwrites anything.", "",
          "LAST / CURRENT SEARCH (offered as the defaults next time)", "  " + PREFS] + last +
@@ -185,12 +197,24 @@ def find_subpaths(directory, match, backups):
     return found
 
 
-def scan_one(backup, directory, match, subpaths=()):
+def scan_one(backup, directory, match, subpaths=(), deep=False):
     stamp = os.path.basename(backup).replace(".backup", "")
     base = backup_base(backup, directory)
     if base is None:
         return []
     rows = []
+    if deep:
+        for root, dirs, files in os.walk(base):
+            for n in dirs + files:
+                if match(n):
+                    p = os.path.join(root, n)
+                    try:
+                        st = os.lstat(p)
+                    except OSError:
+                        continue
+                    rows.append((os.path.relpath(p, base), int(st.st_mtime), st.st_size,
+                                 os.path.isdir(p), p, stamp))
+        return rows
     try:
         names = os.listdir(base)
     except OSError:
@@ -213,17 +237,22 @@ def scan_one(backup, directory, match, subpaths=()):
     return rows
 
 
-def scan(directory, pattern, backups, subfolders=False):
+def scan(directory, pattern, backups, mode="folder", progress=None):
     """Return distinct versions, grouped by name, newest first.
 
-    A name is relative to `directory`, so a match in a subfolder shows where
-    it is.
+    mode is "folder", "subfolders" or "deep". A name is relative to
+    `directory`, so a match in a subfolder shows where it is. progress, if
+    given, is called with (backups done, backups in all).
     """
     match = match_fn(pattern)
-    subpaths = find_subpaths(directory, match, backups) if subfolders else []
+    subpaths = find_subpaths(directory, match, backups) if mode == "subfolders" else []
+    deep = mode == "deep"
     versions = {}
     with ThreadPoolExecutor(16) as ex:
-        for rows in ex.map(lambda b: scan_one(b, directory, match, subpaths), backups):
+        for done, rows in enumerate(ex.map(
+                lambda b: scan_one(b, directory, match, subpaths, deep), backups), 1):
+            if progress:
+                progress(done, len(backups))
             for n, mtime, size, isdir, p, stamp in rows:
                 v = versions.setdefault((n, mtime, size), {
                     "name": n, "mtime": mtime, "size": size, "dir": isdir,
@@ -268,7 +297,7 @@ def restore(v, dest_dir):
 
 # ---------- terminal ----------
 
-def cli(args, subfolders=False):
+def cli(args, mode="folder"):
     t0 = time.time()
     prefs = load_prefs()
     last_dir = prefs.get("directory") or os.getcwd()
@@ -282,11 +311,16 @@ def cli(args, subfolders=False):
         return 0
     save_prefs(directory=directory, pattern=pattern, status="searching")
     backups = list_backups(False)
-    results = scan(directory, pattern, backups, subfolders)
+    progress = None
+    if mode == "deep":
+        progress = lambda done, total: sys.stderr.write(
+            "\rDeep Search: %d of %d backups%s" % (done, total, "\n" if done == total else ""))
+    results = scan(directory, pattern, backups, mode, progress)
     save_prefs(status="searched: %d version(s)" % len(results))
     print("\nScanned %d backups in %.1fs; %d version(s) of '%s' in %s%s\n" % (
         len(backups), time.time() - t0, len(results), pattern, directory,
-        " and its subfolders" if subfolders else ""))
+        {"folder": "", "subfolders": " and its subfolders",
+         "deep": " and its subfolders (Deep Search)"}[mode]))
     if not results:
         return 0
     for i, v in enumerate(results, 1):
@@ -362,25 +396,38 @@ def gui():
         return 0
     # 3. the pattern, last
     rc, out = osa(ask, ["File name to recover (part of a name, or a pattern like *.pl):\nsearching in "
-                        + directory, prefs.get("pattern", ""), "Search",
-                        "Cancel", "Search Subfolders", "Search"])
-    button, _, pattern = out.partition("|")
-    pattern = pattern.strip()
-    subfolders = button == "Search Subfolders"
+                        + directory, prefs.get("pattern", ""), "Search", "Cancel", "Search"])
+    pattern = out.split("|", 1)[-1].strip()
     if rc or not pattern:
         return 0
-    save_prefs(directory=directory, pattern=pattern, destination=dest, status="searching")
+    # 4. how far to look. The last choice is preselected.
+    last = prefs.get("scope") if prefs.get("scope") in SCOPE_MODES else "folder"
+    rc, out = osa('on run argv\ntell current application to activate\n'
+                  'set r to choose from list (items 3 thru -1 of argv) with title "TMsearch" '
+                  'with prompt (item 1 of argv) default items {item 2 of argv} '
+                  'OK button name "Search" cancel button name "Cancel"\n'
+                  'if r is false then error number -128\nreturn item 1 of r\nend run',
+                  ["Search for '%s' in:" % pattern, SCOPES[SCOPE_MODES.index(last)]] + list(SCOPES))
+    if rc or out not in SCOPES:
+        return 0
+    mode = SCOPE_MODES[SCOPES.index(out)]
+    save_prefs(directory=directory, pattern=pattern, destination=dest, scope=mode,
+               status="searching")
     dlg = subprocess.Popen(
         ["/usr/bin/osascript", "-e",
          'on run argv\ntell current application to activate\n'
          'display dialog (item 1 of argv) with title "TMsearch" buttons {"Cancel"} '
-         'default button 1 with icon note giving up after 900\nend run',
-         "Searching Time Machine backups for '%s'\nin %s%s\n\nThe more backups there are, the longer this takes."
-         % (pattern, directory, " and its subfolders" if subfolders else "")],
+         'default button 1 with icon note\nend run',
+         "Searching Time Machine backups for '%s'\nin %s%s\n\n%s"
+         % (pattern, directory,
+            {"folder": "", "subfolders": " and its subfolders",
+             "deep": " and its subfolders, in every backup"}[mode],
+            "Deep Search takes minutes; the bigger the folder, the longer."
+            if mode == "deep" else "The more backups there are, the longer this takes.")],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     found = []
     worker = threading.Thread(target=lambda: found.append(
-        scan(directory, pattern, list_backups(True), subfolders)), daemon=True)
+        scan(directory, pattern, list_backups(True), mode)), daemon=True)
     worker.start()
     while worker.is_alive():
         worker.join(0.2)
@@ -429,8 +476,13 @@ def main():
         return 0
     if "--gui" in args or ("--cli" not in args and not sys.stdin.isatty()):
         return gui()
-    subfolders = any(a in ("-r", "--subfolders") for a in args)
-    return cli([a for a in args if a not in ("--cli", "--gui", "-r", "--subfolders")], subfolders)
+    mode = "folder"
+    if any(a in ("-r", "--subfolders") for a in args):
+        mode = "subfolders"
+    if any(a in ("-d", "--deep") for a in args):
+        mode = "deep"
+    flags = ("--cli", "--gui", "-r", "--subfolders", "-d", "--deep")
+    return cli([a for a in args if a not in flags], mode)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-# TMsearch 1.3.0
+# TMsearch 1.4.0
 
 Find every past version of a file in your Time Machine backups and restore the
 one you want, without browsing backups one at a time in the Time Machine
@@ -46,14 +46,21 @@ Open TMsearch. It asks for:
 2. the **destination folder** for the restored copy;
 3. the **name**: part of a file name, or a pattern such as `*.txt`.
 
-Click **Search** to look in that folder, or **Search Subfolders** to look in
-the folders inside it as well. It then lists the versions it found. Pick one and click Restore, and the copy
+It then asks how far to search:
+
+- **This folder only**: the quickest;
+- **This folder and its subfolders**: a few seconds more;
+- **Deep Search**: subfolders in every backup, which also finds files in
+  folders you have since deleted. It takes minutes.
+
+It remembers your choice for next time, then lists the versions it found. Pick one and click Restore, and the copy
 is shown in Finder.
 
 ## Using it from the terminal
 
     tmsearch [folder] [name]
     tmsearch -r [folder] [name]     also search subfolders
+    tmsearch -d [folder] [name]     Deep Search
 
 Results are numbered; type a number to restore that version. With no arguments,
 `tmsearch` asks for the folder and name, offering the last ones you used.
@@ -63,13 +70,17 @@ holds.
 The name is matched without regard to case. A plain word matches anywhere in a
 file name; `*` and `?` make it a pattern.
 
-## Searching subfolders
+## Subfolders and Deep Search
 
 A subfolder search finds where matching files are in your newest backup, then
-collects every version of each one from all of your backups. A file that was
-in a subfolder but had already been deleted by the time of your newest backup
-is not found; search the folder it was directly in instead. Subfolder searches
-of a large folder take longer, and searching your whole disk is not practical.
+collects every version of each one from all of your backups. It does not find
+a file in a subfolder that had already been deleted by the time of your newest
+backup.
+
+Deep Search does: it goes through the folder and all its subfolders in every
+backup. That takes minutes rather than seconds, and longer for a big folder.
+Searching your whole disk either way is not practical; pick the folder the
+file was in, or one a level or two above it.
 
 ## Requirements
 
