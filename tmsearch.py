@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 """
 TMsearch - find and restore past versions of a file from Time Machine backups.
-Version: 1.2.0
+Version: 1.3.0
 
-    Terminal:       tmsearch [directory] [name]     numbered results in the same window
+    Terminal:       tmsearch [-r] [directory] [name]   numbered results in the same window
     Finder:         double-click TMsearch.app       dialogs + numbered list window
 
     name is part of a file name (case-insensitive) or a pattern with * and ?.
@@ -14,6 +14,11 @@ Needs Full Disk Access for Terminal (CLI) or TMsearch.app (double-click).
 
 v1.2.0: one version number for the app and the script; preferences live
 under com.timmccoy.tmsearch; the progress message no longer promises a time.
+
+v1.3.0: subfolder search (-r, or Search Subfolders in Finder). The newest
+backup that holds the folder is walked to find where matching files live, and
+each of those paths is then looked up in every backup. A file deleted before
+that newest backup is only found if it was directly in the folder searched.
 """
 
 import fnmatch
@@ -27,7 +32,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 MAX_GUI = 300
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.3.0"
 PREFS = os.path.expanduser("~/Library/Preferences/com.timmccoy.tmsearch.plist")
 
 
@@ -94,12 +99,15 @@ def help_text():
         ["TMsearch %s - find and restore past versions of a file from Time Machine" % APP_VERSION, "",
          "USAGE",
          "  tmsearch [directory] [name]     terminal: numbered results in this window",
+         "  tmsearch -r [directory] [name]  also search subfolders",
          "  tmsearch                        asks for them, offering the last ones as defaults",
          "  double-click TMsearch.app       dialogs: source folder, destination folder, name,",
          "                                  then a numbered list window to pick the one to restore",
          "  tmsearch -h | -help | --help    this text", "",
          "  name is part of a file name (case-insensitive) or a pattern with * and ?.",
          "  Folders and apps work too, and so do files that have since been deleted.",
+         "  -r finds matches in subfolders that exist in the newest backup holding the folder;",
+         "  each one is then looked up in every backup.",
          "  A restored copy is named <name>-<yyyymmdd-hhmmss modified>.<ext>",
          "  and never overwrites anything.", "",
          "LAST / CURRENT SEARCH (offered as the defaults next time)", "  " + PREFS] + last +
@@ -145,13 +153,42 @@ def match_fn(pattern):
     return lambda n: p in n.lower()
 
 
-def scan_one(backup, directory, match):
-    stamp = os.path.basename(backup).replace(".backup", "")
+def backup_base(backup, directory):
+    """Where `directory` is inside one backup, or None if it is not there."""
     for root in (os.path.join(backup, "Data"), backup):
         base = root + directory
         if os.path.isdir(base):
+            return base
+    return None
+
+
+def find_subpaths(directory, match, backups):
+    """Matching paths below the folder's top level, relative to it.
+
+    Walks only the newest backup that holds the folder: walking every backup
+    takes minutes for a large folder, and the per-backup lookups in scan_one
+    then find every version of each path that turns up here.
+    """
+    for backup in reversed(backups):
+        base = backup_base(backup, directory)
+        if base:
             break
     else:
+        return []
+    found = []
+    for root, dirs, files in os.walk(base):
+        if root == base:
+            continue                    # the top level is scanned in every backup anyway
+        for n in dirs + files:
+            if match(n):
+                found.append(os.path.relpath(os.path.join(root, n), base))
+    return found
+
+
+def scan_one(backup, directory, match, subpaths=()):
+    stamp = os.path.basename(backup).replace(".backup", "")
+    base = backup_base(backup, directory)
+    if base is None:
         return []
     rows = []
     try:
@@ -166,15 +203,27 @@ def scan_one(backup, directory, match):
             except OSError:
                 continue
             rows.append((n, int(st.st_mtime), st.st_size, os.path.isdir(p), p, stamp))
+    for rel in subpaths:
+        p = os.path.join(base, rel)
+        try:
+            st = os.lstat(p)
+        except OSError:
+            continue
+        rows.append((rel, int(st.st_mtime), st.st_size, os.path.isdir(p), p, stamp))
     return rows
 
 
-def scan(directory, pattern, backups):
-    """Return distinct versions, grouped by name, newest first."""
+def scan(directory, pattern, backups, subfolders=False):
+    """Return distinct versions, grouped by name, newest first.
+
+    A name is relative to `directory`, so a match in a subfolder shows where
+    it is.
+    """
     match = match_fn(pattern)
+    subpaths = find_subpaths(directory, match, backups) if subfolders else []
     versions = {}
     with ThreadPoolExecutor(16) as ex:
-        for rows in ex.map(lambda b: scan_one(b, directory, match), backups):
+        for rows in ex.map(lambda b: scan_one(b, directory, match, subpaths), backups):
             for n, mtime, size, isdir, p, stamp in rows:
                 v = versions.setdefault((n, mtime, size), {
                     "name": n, "mtime": mtime, "size": size, "dir": isdir,
@@ -203,7 +252,7 @@ def label(i, v):
 # ---------- restoring ----------
 
 def restore(v, dest_dir):
-    stem, ext = os.path.splitext(v["name"])      # keeps .app etc. so the copy still opens
+    stem, ext = os.path.splitext(os.path.basename(v["name"]))   # keeps .app etc. so the copy still opens
     when = datetime.fromtimestamp(v["mtime"]).strftime("%Y%m%d-%H%M%S")
     target = os.path.join(dest_dir, "%s-%s%s" % (stem, when, ext))
     k = 1
@@ -219,7 +268,7 @@ def restore(v, dest_dir):
 
 # ---------- terminal ----------
 
-def cli(args):
+def cli(args, subfolders=False):
     t0 = time.time()
     prefs = load_prefs()
     last_dir = prefs.get("directory") or os.getcwd()
@@ -233,10 +282,11 @@ def cli(args):
         return 0
     save_prefs(directory=directory, pattern=pattern, status="searching")
     backups = list_backups(False)
-    results = scan(directory, pattern, backups)
+    results = scan(directory, pattern, backups, subfolders)
     save_prefs(status="searched: %d version(s)" % len(results))
-    print("\nScanned %d backups in %.1fs; %d version(s) of '%s' in %s\n" % (
-        len(backups), time.time() - t0, len(results), pattern, directory))
+    print("\nScanned %d backups in %.1fs; %d version(s) of '%s' in %s%s\n" % (
+        len(backups), time.time() - t0, len(results), pattern, directory,
+        " and its subfolders" if subfolders else ""))
     if not results:
         return 0
     for i, v in enumerate(results, 1):
@@ -312,8 +362,11 @@ def gui():
         return 0
     # 3. the pattern, last
     rc, out = osa(ask, ["File name to recover (part of a name, or a pattern like *.pl):\nsearching in "
-                        + directory, prefs.get("pattern", ""), "Search", "Cancel", "Search"])
-    pattern = out.split("|", 1)[-1].strip()
+                        + directory, prefs.get("pattern", ""), "Search",
+                        "Cancel", "Search Subfolders", "Search"])
+    button, _, pattern = out.partition("|")
+    pattern = pattern.strip()
+    subfolders = button == "Search Subfolders"
     if rc or not pattern:
         return 0
     save_prefs(directory=directory, pattern=pattern, destination=dest, status="searching")
@@ -322,12 +375,12 @@ def gui():
          'on run argv\ntell current application to activate\n'
          'display dialog (item 1 of argv) with title "TMsearch" buttons {"Cancel"} '
          'default button 1 with icon note giving up after 900\nend run',
-         "Searching Time Machine backups for '%s'\nin %s\n\nThe more backups there are, the longer this takes."
-         % (pattern, directory)],
+         "Searching Time Machine backups for '%s'\nin %s%s\n\nThe more backups there are, the longer this takes."
+         % (pattern, directory, " and its subfolders" if subfolders else "")],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     found = []
     worker = threading.Thread(target=lambda: found.append(
-        scan(directory, pattern, list_backups(True))), daemon=True)
+        scan(directory, pattern, list_backups(True), subfolders)), daemon=True)
     worker.start()
     while worker.is_alive():
         worker.join(0.2)
@@ -376,7 +429,8 @@ def main():
         return 0
     if "--gui" in args or ("--cli" not in args and not sys.stdin.isatty()):
         return gui()
-    return cli([a for a in args if a not in ("--cli", "--gui")])
+    subfolders = any(a in ("-r", "--subfolders") for a in args)
+    return cli([a for a in args if a not in ("--cli", "--gui", "-r", "--subfolders")], subfolders)
 
 
 if __name__ == "__main__":
