@@ -4,8 +4,13 @@ Find every past version of a file in your Time Machine backups and restore the
 one you want, without browsing backups one at a time in the Time Machine
 interface.
 
-TMsearch looks in one folder across all of your backups at once and lists each
-distinct version it finds, newest first, with its modification date, size and
+Browsing in Time Machine is painfully slow: each step back through the
+backups redraws the Finder window, and finding the right version of one file
+can take many minutes. TMsearch searches every backup at once and has the full
+list ready in seconds.
+
+You give it the folder the file was in, and it lists each distinct version it
+finds, newest first, with its modification date, size and
 how many backups hold it. Files, folders and apps all work, including ones that
 have since been deleted.
 
