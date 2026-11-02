@@ -1,0 +1,5 @@
+#!/bin/zsh
+# tmsearch — run TMsearch from the terminal.
+# Resolves its own path through any symlink, then runs the app's executable
+# with the same arguments: Contents/Resources/tmsearch -> Contents/MacOS/TMsearch.
+exec "${0:A:h:h}/MacOS/TMsearch" "$@"
