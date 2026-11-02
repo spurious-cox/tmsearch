@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """
 TMsearch - find and restore past versions of a file from Time Machine backups.
-Version: 1.6.1
+Version: 1.6.2
 
     Terminal:       tmsearch [-r|-d] [directory] [name]   numbered results in the same window
     Finder:         double-click TMsearch.app       dialogs + numbered list window
@@ -41,6 +41,8 @@ impossible to edit or delete normally.
 v1.6.1: missing Full Disk Access gets its own message naming the app that
 needs it, with an Open Settings button in Finder, instead of tmutil's text,
 which always says to add Terminal.
+
+v1.6.2: paths in the home folder are shown starting with ~.
 """
 
 import fnmatch
@@ -63,8 +65,19 @@ SCOPES = ("This folder only",
           "This folder and its subfolders",
           "Deep Search: every backup, also finds deleted folders (takes minutes)")
 SCOPE_MODES = ("folder", "subfolders", "deep")
-APP_VERSION = "1.6.1"
+APP_VERSION = "1.6.2"
 PREFS = os.path.expanduser("~/Library/Preferences/com.timmccoy.tmsearch.plist")
+
+
+HOME = os.path.expanduser("~")
+
+
+def tilde(path):
+    """A path for display: the home folder written as ~."""
+    path = str(path)
+    if path == HOME or path.startswith(HOME + "/"):
+        return "~" + path[len(HOME):]
+    return path
 
 
 def load_prefs():
@@ -120,11 +133,11 @@ def help_text():
     prefs = load_prefs()
     last = ["  (no search yet)"]
     if prefs.get("directory"):
-        last = ["  Directory:    %s" % prefs["directory"],
+        last = ["  Directory:    %s" % tilde(prefs["directory"]),
                 "  Pattern:      %s" % prefs.get("pattern", ""),
                 "  Status:       %s" % prefs.get("status", ""),
-                "  Destination:  %s" % prefs.get("destination", "(none yet)"),
-                "  Restored:     %s" % prefs.get("restored", "(nothing yet)"),
+                "  Destination:  %s" % tilde(prefs.get("destination", "(none yet)")),
+                "  Restored:     %s" % tilde(prefs.get("restored", "(nothing yet)")),
                 "  Updated:      %s" % prefs.get("updated", "")]
     return "\n".join(
         ["TMsearch %s - find and restore past versions of a file from Time Machine" % APP_VERSION, "",
@@ -151,7 +164,7 @@ def help_text():
          "  A restored copy is named <name>-<yyyymmdd-hhmmss modified>.<ext>,",
          "  and its own modified time is when it was restored.",
          "  Restoring never overwrites anything.", "",
-         "LAST / CURRENT SEARCH (offered as the defaults next time)", "  " + PREFS] + last +
+         "LAST / CURRENT SEARCH (offered as the defaults next time)", "  " + tilde(PREFS)] + last +
         ["", "TIME MACHINE VOLUME"] + tm_volume() +
         ["", "Needs Full Disk Access for Terminal (CLI) or TMsearch.app (double-click)."]) + "\n"
 
@@ -370,7 +383,7 @@ def cli(args, mode="folder"):
     t0 = time.time()
     prefs = load_prefs()
     last_dir = prefs.get("directory") or os.getcwd()
-    directory = args[0] if args else input("Source directory [%s]: " % last_dir).strip()
+    directory = args[0] if args else input("Source directory [%s]: " % tilde(last_dir)).strip()
     directory = os.path.abspath(os.path.expanduser(directory or last_dir))
     last_pat = prefs.get("pattern", "")
     pattern = args[1] if len(args) > 1 else input(
@@ -387,13 +400,13 @@ def cli(args, mode="folder"):
     results = scan(directory, pattern, backups, mode, progress)
     save_prefs(status="searched: %d version(s)" % len(results))
     print("\nScanned %d backups in %.1fs; %d version(s) of '%s' in %s%s\n" % (
-        len(backups), time.time() - t0, len(results), pattern, directory,
+        len(backups), time.time() - t0, len(results), pattern, tilde(directory),
         {"folder": "", "subfolders": " and its subfolders",
          "deep": " and its subfolders (Deep Search)"}[mode]))
     if not results:
         if not in_any_backup(directory, backups):
             sys.stderr.write("TMsearch: %s is not in any of the backups. Check the folder's path.\n"
-                             % directory)
+                             % tilde(directory))
             return 1
         return 0
     for i, v in enumerate(results, 1):
@@ -404,7 +417,7 @@ def cli(args, mode="folder"):
             return 0
         v = results[int(pick) - 1]
         default_dest = prefs.get("destination") or directory
-        dest = input("Restore into directory [%s]: " % default_dest).strip()
+        dest = input("Restore into directory [%s]: " % tilde(default_dest)).strip()
         dest = os.path.abspath(os.path.expanduser(dest or default_dest))
     except (ValueError, IndexError):
         sys.stderr.write("TMsearch: not a valid number\n")
@@ -413,11 +426,11 @@ def cli(args, mode="folder"):
         print()
         return 0
     if not os.path.isdir(dest):
-        sys.stderr.write("TMsearch: %s is not a directory\n" % dest)
+        sys.stderr.write("TMsearch: %s is not a directory\n" % tilde(dest))
         return 1
     target = restore(v, dest)
     save_prefs(destination=dest, restored=target, status="restored")
-    print("Restored: %s" % target)
+    print("Restored: %s" % tilde(target))
     return 0
 
 
@@ -438,14 +451,15 @@ def gui():
             if rc:
                 return None
             button, _, typed = out.partition("|")
-            path = os.path.expanduser(typed.strip()) or path
+            path = os.path.expanduser(typed.strip() or path)
             if button != "Browse...":
                 path = os.path.abspath(path)
                 if must_exist and not os.path.isdir(path):
                     osa('on run argv\ntell current application to activate\n'
                         'display dialog (item 1 of argv) with title "TMsearch" buttons {"OK"} '
                         'default button 1 with icon caution\nend run',
-                        ["%s is not a folder." % path])
+                        ["%s is not a folder." % tilde(path)])
+                    path = tilde(path)
                     continue
                 return path
             start = path
@@ -455,22 +469,22 @@ def gui():
                              'return POSIX path of (choose folder with prompt "TMsearch: choose the folder" '
                              'default location (POSIX file (item 1 of argv)))\nend run', [start])
             if not rc and chosen:
-                path = chosen
+                path = tilde(chosen.rstrip("/") or "/")
 
     # 1. source: where the file was. It is typed, so a folder that no longer exists works.
     directory = ask_folder("SOURCE folder: where the file was when it last existed.\n"
                            "Type a path or click Browse (it need not exist now).",
-                           prefs.get("directory") or os.path.expanduser("~"), False)
+                           tilde(prefs.get("directory") or HOME), False)
     if not directory:
         return 0
     # 2. destination: where the recovered copy will go
     dest = ask_folder("DESTINATION folder for the recovered copy.\nType a path or click Browse.",
-                      prefs.get("destination") or directory, True)
+                      tilde(prefs.get("destination") or directory), True)
     if not dest:
         return 0
     # 3. the pattern, last
     rc, out = osa(ask, ["File name to recover (part of a name; * and ? allowed, as in state*farm):\nsearching in "
-                        + directory, prefs.get("pattern", ""), "Search", "Cancel", "Search"])
+                        + tilde(directory), prefs.get("pattern", ""), "Search", "Cancel", "Search"])
     pattern = out.split("|", 1)[-1].strip()
     if rc or not pattern:
         return 0
@@ -493,7 +507,7 @@ def gui():
          'display dialog (item 1 of argv) with title "TMsearch" buttons {"Cancel"} '
          'default button 1 with icon note\nend run',
          "Searching Time Machine backups for '%s'\nin %s%s\n\n%s"
-         % (pattern, directory,
+         % (pattern, tilde(directory),
             {"folder": "", "subfolders": " and its subfolders",
              "deep": " and its subfolders, in every backup"}[mode],
             "Deep Search takes minutes; the bigger the folder, the longer."
@@ -515,8 +529,8 @@ def gui():
     save_prefs(status="searched: %d version(s)" % len(results))
     if not results:
         if not in_any_backup(directory, list_backups(True)):
-            die("%s is not in any of the backups. Check the folder's path." % directory, True)
-        die("No versions of '%s' found in %s." % (pattern, directory), True)
+            die("%s is not in any of the backups. Check the folder's path." % tilde(directory), True)
+        die("No versions of '%s' found in %s." % (pattern, tilde(directory)), True)
     shown = results[:MAX_GUI]
     note = " (first %d of %d)" % (MAX_GUI, len(results)) if len(results) > MAX_GUI else ""
     rc, choice = osa('on run argv\ntell current application to activate\n'
@@ -535,7 +549,7 @@ def gui():
     subprocess.run(["/usr/bin/open", "-R", target])
     osa('on run argv\ntell current application to activate\n'
         'display dialog ("Restored to:\n" & item 1 of argv) with title "TMsearch" '
-        'buttons {"OK"} default button 1\nend run', [target])
+        'buttons {"OK"} default button 1\nend run', [tilde(target)])
     return 0
 
 

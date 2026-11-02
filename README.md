@@ -1,4 +1,4 @@
-# TMsearch 1.6.1
+# TMsearch 1.6.2
 
 Find every past version of a file in your Time Machine backups and restore the
 one you want, without browsing backups one at a time in the Time Machine

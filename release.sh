@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Notarize TMsearch.app and wrap it in a distributable DMG — v1.0.0
+# Notarize TMsearch.app and wrap it in a distributable DMG — v1.0.1
 #
 # Run ./build.sh first; this takes dist/TMsearch.app as it finds it.
 #
@@ -60,7 +60,6 @@ THE TMSEARCH COMMAND
         /Applications/TMsearch.app/Contents/Resources/tmsearch
 
 https://github.com/spurious-cox/tmsearch
-(c) 2026 Tim McCoy
 READMEEOF
 for attempt in 1 2 3 4 5; do
     if hdiutil create -volname "TMsearch" -srcfolder dist/dmg -ov \
