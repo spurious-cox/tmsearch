@@ -1,4 +1,4 @@
-# TMsearch 1.6.0
+# TMsearch 1.6.1
 
 Find every past version of a file in your Time Machine backups and restore the
 one you want, without browsing backups one at a time in the Time Machine
@@ -39,7 +39,9 @@ Turn it on in **System Settings › Privacy & Security › Full Disk Access**:
 - for **TMsearch**, to use it from Finder;
 - for **Terminal** (or the terminal app you use), to use the `tmsearch` command.
 
-Without it, TMsearch reports that it found no backups.
+Without it, TMsearch says so and, from Finder, offers to open that page.
+After an update, if TMsearch is listed but still refused, remove it with **−**
+and add it again.
 
 ## Using it from Finder
 

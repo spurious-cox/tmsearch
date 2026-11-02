@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """
 TMsearch - find and restore past versions of a file from Time Machine backups.
-Version: 1.6.0
+Version: 1.6.1
 
     Terminal:       tmsearch [-r|-d] [directory] [name]   numbered results in the same window
     Finder:         double-click TMsearch.app       dialogs + numbered list window
@@ -37,6 +37,10 @@ still carries the version's own modified time. The copy also loses the access
 rule Time Machine puts on every backed-up item (everyone: deny write, delete,
 writeattr ...), which cp -p carried over and which left restored files
 impossible to edit or delete normally.
+
+v1.6.1: missing Full Disk Access gets its own message naming the app that
+needs it, with an Open Settings button in Finder, instead of tmutil's text,
+which always says to add Terminal.
 """
 
 import fnmatch
@@ -59,7 +63,7 @@ SCOPES = ("This folder only",
           "This folder and its subfolders",
           "Deep Search: every backup, also finds deleted folders (takes minutes)")
 SCOPE_MODES = ("folder", "subfolders", "deep")
-APP_VERSION = "1.6.0"
+APP_VERSION = "1.6.1"
 PREFS = os.path.expanduser("~/Library/Preferences/com.timmccoy.tmsearch.plist")
 
 
@@ -173,13 +177,37 @@ def osa(script, args=(), report=True):
 
 # ---------- scanning ----------
 
+FDA_SETTINGS = "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
+
+
+def no_disk_access(gui):
+    """tmutil's own message always says to add Terminal, whoever is asking."""
+    who = "TMsearch" if gui else "Terminal (or the terminal app you use)"
+    msg = ("TMsearch needs Full Disk Access to read your Time Machine backups.\n\n"
+           "In System Settings > Privacy & Security > Full Disk Access, click +, "
+           "add %s, and turn it on. If %s is already listed, remove it with - and "
+           "add it again; an updated copy is not covered by the old entry."
+           % (who, "TMsearch" if gui else "it"))
+    if not gui:
+        sys.stderr.write("TMsearch: %s\n" % msg.replace("\n\n", "\n"))
+        sys.exit(1)
+    rc, button = osa('on run argv\ntell current application to activate\n'
+                     'return button returned of (display dialog (item 1 of argv) '
+                     'with title "TMsearch" buttons {"OK", "Open Settings"} '
+                     'default button 2 with icon stop)\nend run', [msg], report=False)
+    if button == "Open Settings":
+        subprocess.run(["/usr/bin/open", FDA_SETTINGS])
+    sys.exit(1)
+
+
 def list_backups(gui):
     r = subprocess.run(["/usr/bin/tmutil", "listbackups"], capture_output=True, text=True)
     out = [l for l in r.stdout.splitlines() if l.strip()]
     if not out:
-        die("No Time Machine backups found (%s). Is the backup disk connected, and does "
-            "%s have Full Disk Access?" % (r.stderr.strip() or "none listed",
-                                          "TMsearch.app" if gui else "Terminal"), gui)
+        if "Full Disk Access" in r.stderr:
+            no_disk_access(gui)
+        die("No Time Machine backups found. Is the backup disk connected?%s"
+            % ("\n\n(%s)" % r.stderr.strip() if r.stderr.strip() else ""), gui)
     return out
 
 
