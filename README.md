@@ -1,4 +1,4 @@
-# TMsearch 1.7.1
+# TMsearch 1.8.2
 
 Find every past version of a file in your Time Machine backups and restore the
 one you want, without browsing backups one at a time in the Time Machine
@@ -11,7 +11,7 @@ list ready in seconds.
 
 You give it the folder the file was in, and it lists each distinct version it
 finds, newest first, with its modification date, size and
-how many backups hold it. Files, folders and apps all work, including ones that
+how many backups hold it. For apps it also shows the version number. Files, folders and apps all work, including ones that
 have since been deleted.
 
 A restored copy is saved under a new name and never overwrites anything:
@@ -70,7 +70,7 @@ are shown in Finder.
     tmsearch -d [folder] [name]     Deep Search
 
 Results are numbered; type a number to restore that version, or several
-numbers and ranges, such as `1 3 5-7`, to restore more than one. With no arguments,
+numbers and ranges, e.g. `1 3 5-7`, to restore more than one. With no arguments,
 `tmsearch` asks for the folder and name, offering the last ones you used.
 `tmsearch --help` also shows your Time Machine disk and how many backups it
 holds.
@@ -78,6 +78,10 @@ holds.
 The name is matched anywhere in a file name, without regard to case. `*`
 stands for any run of characters and `?` for any one character, so
 `state*farm` finds both `Statefarm_home.pdf` and `State Farm Claim.eml`.
+
+Separate several names with `|` to find any of them in one search, e.g.
+`png*mini|marine*saver`. Quote the name on the command line, or the shell reads
+`|` as a pipe.
 
 ### Quoting names
 

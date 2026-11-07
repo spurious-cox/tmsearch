@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """
 TMsearch - find and restore past versions of a file from Time Machine backups.
-Version: 1.7.1
+Version: 1.8.2
 
     Terminal:       tmsearch [-r|-d] [directory] [name]   numbered results in the same window
     Finder:         double-click TMsearch.app       dialogs + numbered list window
@@ -47,7 +47,7 @@ v1.6.2: paths in the home folder are shown starting with ~.
 v1.7.0: several versions can be restored at once: Command-click in the Finder
 list, or type numbers and ranges such as 1 3 5-7 in the terminal.
 
-v1.7.1: the app has an icon.
+v1.8.2: the app has an icon.
 """
 
 import fnmatch
@@ -70,7 +70,7 @@ SCOPES = ("This folder only",
           "This folder and its subfolders",
           "Deep Search: every backup, also finds deleted folders (takes minutes)")
 SCOPE_MODES = ("folder", "subfolders", "deep")
-APP_VERSION = "1.7.1"
+APP_VERSION = "1.8.2"
 PREFS = os.path.expanduser("~/Library/Preferences/com.timmccoy.tmsearch.plist")
 
 
@@ -157,7 +157,8 @@ def help_text():
          "  name is part of a file name (case-insensitive), optionally with * and ?:",
          "  state*farm matches 'Statefarm_home.pdf' and 'State Farm Claim.eml'.",
          "",
-         "  Quote a name that has *, ? or a space, or the shell changes it first:",
+         "  Separate several names with |, e.g.; 'png*mini|marine*saver'.",
+         "  Quote a name that has *, ?, | or a space, or the shell changes it first:",
          "      tmsearch -r ~/Documents 'state*farm'",
          "      tmsearch -r ~/Documents \"state farm\"",
          "  In zsh, this alias in ~/.zshrc removes the need to quote * and ?:",
@@ -230,13 +231,19 @@ def list_backups(gui):
     return out
 
 
-def match_fn(pattern):
-    """Case-insensitive, and anywhere in the name, with or without * and ?."""
-    p = pattern.lower()
+def match_one(p):
+    p = p.lower()
     if any(c in p for c in "*?["):
         p = ("" if p.startswith("*") else "*") + p + ("" if p.endswith("*") else "*")
         return lambda n: fnmatch.fnmatch(n.lower(), p)
     return lambda n: p in n.lower()
+
+
+def match_fn(pattern):
+    """Case-insensitive, and anywhere in the name, with or without * and ?.
+    "|" separates alternatives: a name matching any one of them matches."""
+    fns = [match_one(p.strip()) for p in pattern.split("|") if p.strip()]
+    return lambda n: any(f(n) for f in fns)
 
 
 def in_any_backup(directory, backups):
@@ -348,12 +355,27 @@ def human(n):
         n /= 1024.0
 
 
+def app_version(v):
+    """CFBundleShortVersionString of a backed-up .app, or "" if unreadable."""
+    if not (v["dir"] and v["name"].lower().endswith(".app")):
+        return ""
+    try:
+        with open(os.path.join(v["path"], "Contents", "Info.plist"), "rb") as f:
+            info = plistlib.load(f)
+    except (OSError, ValueError, plistlib.InvalidFileException):
+        return ""
+    return str(info.get("CFBundleShortVersionString") or info.get("CFBundleVersion") or "")
+
+
 def label(i, v):
-    return "%d. %s%s  |  modified %s  |  %s  |  in %d backup%s, latest %s" % (
-        i, v["name"], "/" if v["dir"] else "",
-        datetime.fromtimestamp(v["mtime"]).strftime("%Y-%m-%d %H:%M:%S"),
-        "folder" if v["dir"] else human(v["size"]), v["count"],
-        "" if v["count"] == 1 else "s", v["last"])
+    parts = ["%d. %s%s" % (i, v["name"], "/" if v["dir"] else "")]
+    ver = app_version(v)
+    if ver:
+        parts.append(ver)
+    parts += [datetime.fromtimestamp(v["mtime"]).strftime("%Y-%m-%d %H:%M:%S"),
+              "folder" if v["dir"] else human(v["size"]),
+              "%d backup%s, %s" % (v["count"], "" if v["count"] == 1 else "s", v["last"])]
+    return "  |  ".join(parts)
 
 
 # ---------- restoring ----------
@@ -431,7 +453,7 @@ def cli(args, mode="folder"):
     for i, v in enumerate(results, 1):
         print(label(i, v))
     try:
-        pick = input("\nNumbers to restore, such as 1 3 5-7 (blank to quit): ").strip()
+        pick = input("\nNumbers to restore, e.g.; 1 3 5-7 (⏎ to quit): ").strip()
         if not pick:
             return 0
         chosen = [results[n - 1] for n in parse_picks(pick, len(results))]
